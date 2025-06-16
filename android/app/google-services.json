@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "858512932621",
+    "project_id": "visitormgnt",
+    "storage_bucket": "visitormgnt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858512932621:android:c18174bfa03fbcac9dfa44",
+        "android_client_info": {
+          "package_name": "com.example.visitormgnt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxiN3rkA-SPxgSQW0H3DCOEidq3Tlh9XE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
