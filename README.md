@@ -1,16 +1,75 @@
 # visitormgnt
+A College Project to manage visitors.
 
-A new Flutter project.
+<<workflow>>
 
-## Getting Started
+START
+  |
+[Splash Screen]
+  |
+  |--> SharedPreferences.contains(username)?
+         |
+         |---> NO  ------------------> [Login Screen]
+         |
+         |---> YES
+                |
+                |---> if username == 'security' ---> [Security Camera Screen]
+                |
+                |---> else (e.g., MCA20308) -------> [Faculty Home Screen]
 
-This project is a starting point for a Flutter application.
+--------------------------------------
+[Login Screen]
+  |
+  |--> Enter Username & Password
+         |
+         |---> if valid:
+                  Save to SharedPreferences
+                  |
+                  |---> if username == 'security' --> [Security Camera Screen]
+                  |
+                  |---> else --> [Faculty Home Screen]
+         |
+         |---> else --> Show Error
 
-A few resources to get you started if this is your first Flutter project:
+--------------------------------------
+[Security Camera Screen]
+  |
+  |---> Auto Capture Face
+         |
+         v
+[Visitor Form Screen]
+  |
+  |---> Enter Visitor Details + Faculty Username
+         |
+         |---> On Submit:
+                |
+                |---> Save to Firestore ⁠ visitors ⁠ collection
+                |---> Show Visitor Card (with Save/Share option)
+  |
+  |---> 🔔 Notification Icon (top-right)
+         |
+         |---> Opens Security Dashboard
+                  |
+                  |---> Shows list of visitors marked as:
+                          - ✅ Visited
+                          - ❌ Cancelled
+                  |
+                  |---> Helps track who has left or cancelled
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+--------------------------------------
+[Faculty Home Screen]
+  |
+  |---> 🔔 Bell Icon with Badge Count
+         |
+         |---> On click: Show Visitor Cards for that faculty
+                |
+                |---> Each Card has:
+                         [Cancel]  [Visited]
+                |
+                |---> On Action:
+                        |
+                        |---> Move data from ⁠ visitors ⁠ to:
+                                - ⁠ visited ⁠ collection (if visited)
+                                - ⁠ cancelled ⁠ collection (if cancelled)
+                        |
+                        |---> Delete from ⁠ visitors ⁠ collection
