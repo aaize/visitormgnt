@@ -1,7 +1,10 @@
+To create a README file with the specified formatting, you can use Markdown syntax. Below is the formatted text that matches your requirements, including spaces and line breaks:
+
+```markdown
 # visitormgnt
 A College Project to manage visitors.
 
-<<workflow>>
+workflow
 
 START
   |
@@ -73,3 +76,13 @@ START
                                 - ⁠ cancelled ⁠ collection (if cancelled)
                         |
                         |---> Delete from ⁠ visitors ⁠ collection
+```
+
+### Instructions to Add to Your README.md
+1. Create a file named `README.md` in the root of your Flutter project if it doesn't already exist.
+2. Copy the above Markdown text.
+3. Paste it into your `README.md` file.
+4. Save the file.
+
+### Viewing the README
+When you push your project to GitHub, the `README.md` will be rendered automatically on the repository's main page, displaying the formatted text as you intended.
