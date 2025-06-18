@@ -113,6 +113,41 @@ class _SuccessScreenState extends State<SuccessScreen> with TickerProviderStateM
     }
   }
 
+  Future<String> _uploadProfileImageToSupabase(File profileImage, String fileName) async {
+    try {
+      // Read the profile image file as bytes
+      final imageBytes = await profileImage.readAsBytes();
+
+      // Upload to visitor-profile bucket with proper error handling
+      final response = await supabase.storage
+          .from('visitor-profile')
+          .uploadBinary(
+        'profiles/$fileName.jpg',
+        imageBytes,
+        fileOptions: const FileOptions(
+          cacheControl: '3600',
+          upsert: true,
+          contentType: 'image/jpeg',
+        ),
+      );
+
+      // Get public URL of the uploaded profile image
+      final publicUrl = supabase.storage
+          .from('visitor-profile')
+          .getPublicUrl('profiles/$fileName.jpg');
+
+      return publicUrl;
+    } on StorageException catch (e) {
+      // Handle specific storage exceptions
+      if (e.statusCode == '403') {
+        throw Exception('Permission denied. Please check bucket policies.');
+      }
+      throw Exception('Profile image upload failed: ${e.message}');
+    } catch (e) {
+      throw Exception('Profile image upload failed: $e');
+    }
+  }
+
   Future<void> _confirmAndSave() async {
     if (_isConfirmed || _isLoading) return;
 
@@ -121,18 +156,25 @@ class _SuccessScreenState extends State<SuccessScreen> with TickerProviderStateM
     });
 
     try {
+      // Generate unique filename with timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      // Upload profile image to Supabase
+      final profileImageUrl = await _uploadProfileImageToSupabase(
+          widget.profileImage,
+          'profile_${timestamp}'
+      );
+
       // Capture screenshot image
       final imageBytes = await screenshotController.capture();
       if (imageBytes == null) throw Exception('Failed to capture screenshot.');
 
-      // Upload to Supabase Storage using binary data directly
-      final fileName = 'visitor_card_${DateTime
-          .now()
-          .millisecondsSinceEpoch}';
+      // Upload screenshot to Supabase Storage using binary data directly
+      final fileName = 'visitor_card_${timestamp}';
       final publicImageUrl = await _uploadScreenshotToSupabase(
           imageBytes, fileName);
 
-      // ✅ Upload visitor data to Firebase Firestore instead of Supabase table
+      // ✅ Upload visitor data to Firebase Firestore with both URLs
       await FirebaseFirestore.instance.collection('visitors').add({
         'name': widget.name,
         'email': widget.email,
@@ -143,6 +185,7 @@ class _SuccessScreenState extends State<SuccessScreen> with TickerProviderStateM
         'visited_to_username': widget.visitedToUsername,
         'registered_at': DateTime.now().toIso8601String(),
         'visitor_pass_url': publicImageUrl,
+        'profile_image_url': profileImageUrl, // Added profile image URL
       });
 
       setState(() {
@@ -153,7 +196,7 @@ class _SuccessScreenState extends State<SuccessScreen> with TickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Visitor registration saved to Firestore!'),
+            content: Text('Visitor registration saved to Firestore with profile image!'),
             backgroundColor: Colors.green,
           ),
         );
