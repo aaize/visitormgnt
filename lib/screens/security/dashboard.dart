@@ -505,8 +505,8 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
                     backgroundColor: Colors.transparent,
                     insetPadding: const EdgeInsets.all(10),
                     child: Container(
-                      height: 550,
-                      width: 400,
+                      height: 650,
+                      width: 340,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         image: DecorationImage(

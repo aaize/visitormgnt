@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../login_screen.dart';
+import 'history.dart';
 
 
 class FacultyScreen extends StatefulWidget {
@@ -89,11 +90,28 @@ class _FacultyScreenState extends State<FacultyScreen> {
         }
 
         return Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white24),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withOpacity(0.08),
+                Colors.white.withOpacity(0.03),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.15),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -136,85 +154,195 @@ class _FacultyScreenState extends State<FacultyScreen> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
+                      // Large Profile Image
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
-                            child: const Icon(
-                              Icons.person,
-                              color: Colors.blue,
-                              size: 20,
-                            ),
+                          ],
+                        ),
+                        child: visitor['profile_image_url']?.isNotEmpty ?? false
+                            ? ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(
+                            visitor['profile_image_url'],
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildFallbackAvatar();
+                            },
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        )
+                            : _buildFallbackAvatar(),
+                      ),
+
+                      const SizedBox(width: 20),
+
+                      // Visitor Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Name and Pass Badge Row
+                            Row(
                               children: [
-                                Text(
-                                  visitor['name'] ?? 'Unknown',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                Expanded(
+                                  child: Text(
+                                    visitor['name'] ?? 'Unknown Visitor',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                if (visitor['visitor_pass_url']?.isNotEmpty ?? false)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.green.withOpacity(0.8),
+                                          Colors.green.withOpacity(0.6),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(15),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.green.withOpacity(0.3),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.qr_code,
+                                          color: Colors.white,
+                                          size: 12,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Text(
+                                          'Pass',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
-                          ),
-                          if (visitor['visitor_pass_url']?.isNotEmpty ?? false)
+
+                            const SizedBox(height: 12),
+
+                            // Purpose
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.2),
+                                color: Colors.blue.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Text(
-                                'Tap for pass',
-                                style: TextStyle(
-                                  color: Colors.green,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
+                                border: Border.all(
+                                  color: Colors.blue.withOpacity(0.3),
+                                  width: 1,
                                 ),
                               ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.work_outline,
+                                    color: Colors.blue.shade300,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      visitor['purpose'] ?? 'General Visit',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.blue.shade200,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Purpose: ${visitor['purpose'] ?? 'Not specified'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
+
+                            const SizedBox(height: 8),
+
+                            // Phone and Registration Time
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.phone_outlined,
+                                      color: Colors.white60,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        visitor['phone'] ?? 'No phone provided',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.white.withOpacity(0.75),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (registeredAt != null) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.access_time,
+                                        color: Colors.white60,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Registered: ${_formatDateTime(registeredAt)}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white54,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Phone: ${visitor['phone'] ?? 'Not provided'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      ),
-                      if (registeredAt != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Registered: ${registeredAt.toLocal().toString().split('.')[0]}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white54,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -222,14 +350,7 @@ class _FacultyScreenState extends State<FacultyScreen> {
 
               // Action Buttons Section
               Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.02),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
-                  ),
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: Row(
                   children: [
                     Expanded(
@@ -241,6 +362,10 @@ class _FacultyScreenState extends State<FacultyScreen> {
                               SnackBar(
                                 content: Text('${visitor['name'] ?? 'Visitor'} has been cancelled'),
                                 backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                             );
                           } catch (e) {
@@ -248,19 +373,20 @@ class _FacultyScreenState extends State<FacultyScreen> {
                               const SnackBar(
                                 content: Text('Error cancelling visitor'),
                                 backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
                               ),
                             );
                           }
                         },
-                        color: Colors.orange.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(12),
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        color: Colors.orange.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              CupertinoIcons.xmark_circle,
-                              size: 18,
+                              CupertinoIcons.xmark_circle_fill,
+                              size: 20,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 8),
@@ -269,14 +395,14 @@ class _FacultyScreenState extends State<FacultyScreen> {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: CupertinoButton(
                         onPressed: () async {
@@ -286,6 +412,10 @@ class _FacultyScreenState extends State<FacultyScreen> {
                               SnackBar(
                                 content: Text('${visitor['name'] ?? 'Visitor'} marked as visited'),
                                 backgroundColor: Colors.green,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                             );
                           } catch (e) {
@@ -293,19 +423,20 @@ class _FacultyScreenState extends State<FacultyScreen> {
                               const SnackBar(
                                 content: Text('Error marking visitor as met'),
                                 backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
                               ),
                             );
                           }
                         },
-                        color: Colors.green.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(12),
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        color: Colors.green.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              CupertinoIcons.check_mark_circled,
-                              size: 18,
+                              CupertinoIcons.checkmark_circle_fill,
+                              size: 20,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 8),
@@ -314,7 +445,7 @@ class _FacultyScreenState extends State<FacultyScreen> {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -329,6 +460,7 @@ class _FacultyScreenState extends State<FacultyScreen> {
         );
       },
     );
+
   }
 
   Future<void> _loadUserData() async {
@@ -379,26 +511,84 @@ class _FacultyScreenState extends State<FacultyScreen> {
     }
   }
 
+// Helper method for fallback avatar
+  Widget _buildFallbackAvatar() {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.blue.withOpacity(0.3),
+            Colors.blue.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.4),
+          width: 2,
+        ),
+      ),
+      child: const Icon(
+        Icons.person,
+        color: Colors.blue,
+        size: 40,
+      ),
+    );
+  }
+
+// Helper method for date formatting
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays == 0) {
+      return 'Today ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
+  }
+
   Future<void> _moveVisitorToCancelled(DocumentSnapshot visitorDoc) async {
     try {
       final visitorData = visitorDoc.data()! as Map<String, dynamic>;
 
-      // Add timestamp for when they were cancelled
-      visitorData['cancelled_at'] = DateTime.now().toIso8601String();
+      // Add cancellation metadata
+      final DateTime now = DateTime.now();
+      visitorData['cancelled_at'] = now.toIso8601String();
       visitorData['status'] = 'cancelled';
 
-      // Add to visitors-cancelled collection
+      // Move to visitors-cancelled
       await FirebaseFirestore.instance
           .collection('visitors-cancelled')
           .add(visitorData);
 
-      // Remove from original visitors collection
+      // Delete from original collection
       await visitorDoc.reference.delete();
+
+      // Add notification for security
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'type': 'visitor_update',
+        'action': 'cancelled',
+        'visitor_name': visitorData['name'] ?? 'Unknown',
+        'timestamp': FieldValue.serverTimestamp(),
+        'details': {
+          'purpose': visitorData['purpose'],
+          'phone': visitorData['phone'],
+        },
+      });
     } catch (e) {
       print('Error moving visitor to cancelled: $e');
       rethrow;
     }
   }
+
 
   void _showActionDialog(BuildContext context, DocumentSnapshot visitorDoc) {
     final visitorData = visitorDoc.data()! as Map<String, dynamic>;
@@ -590,11 +780,11 @@ class _FacultyScreenState extends State<FacultyScreen> {
                               size: 24,
                             ),
                               onTap:() {
-                                /*Navigator.push(
+                                Navigator.push(
                                   context, MaterialPageRoute(builder:(context)
                                 => HistoryScreen(userId: widget.userId),
                                 ),
-                                );*/
+                                );
                               },
                             ),
 
