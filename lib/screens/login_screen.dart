@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _selectedRole = 'faculty';
 
   bool _isLogin = true;
   bool _isLoading = false;
@@ -48,10 +50,15 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       if (!doc.exists) throw Exception('User not found');
       if (doc['password'] != password) throw Exception('Incorrect password');
 
+      // 🔐 Save FCM token
+      final token = await FirebaseMessaging.instance.getToken();
+      await userRef.update({'fcm_token': token});
+
       await _saveCredentials(username, password);
 
       if (mounted) {
-        if (username.toLowerCase() == 'security') {
+        final role = doc['role'] ?? 'faculty';
+        if (role == 'security') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => SecurityScreen(userId: username)),
@@ -59,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         } else {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => FacultyScreen(userId: username,)),
+            MaterialPageRoute(builder: (_) => FacultyScreen(userId: username)),
           );
         }
       }
@@ -69,7 +76,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
 
   Future<void> _saveCredentials(String username, String password) async {
     final prefs = await SharedPreferences.getInstance();
@@ -102,19 +108,28 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         final doc = await userRef.get();
         if (doc.exists) throw Exception('Username already exists');
 
+        final token = await FirebaseMessaging.instance.getToken();
+
         await userRef.set({
           'username': username,
           'password': password,
+          'role': _selectedRole,
+          'fcm_token': token,
           'createdAt': FieldValue.serverTimestamp(),
         });
         await _saveCredentials(username, password);
 
-        // Navigate from here if needed
-        Navigator.push(
-          context, MaterialPageRoute(builder:(context)
-        => FacultyScreen(userId: username),
-        ),
-        );      } catch (e) {
+        // Navigate after register
+        if (_selectedRole == 'security') {
+          Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (_) => SecurityScreen(userId: username)),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (_) => FacultyScreen(userId: username)),
+          );
+        }
+      } catch (e) {
         _showError(e.toString().replaceFirst('Exception: ', ''));
       } finally {
         setState(() => _isLoading = false);
@@ -163,6 +178,32 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                         _buildInputField(_usernameController, 'Username', Icons.person),
                         const SizedBox(height: 20),
                         _buildInputField(_passwordController, 'Password', Icons.lock, isPassword: true),
+                        if (!_isLogin)
+                          Column(
+                            children: [
+                              const SizedBox(height: 20),
+                              DropdownButtonFormField<String>(
+                                value: _selectedRole,
+                                dropdownColor: const Color(0xFF1F2C44),
+                                decoration: InputDecoration(
+                                  labelText: "Select Role",
+                                  labelStyle: const TextStyle(color: Colors.white),
+                                  filled: true,
+                                  fillColor: Colors.white.withOpacity(0.1),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                                onChanged: (val) => setState(() => _selectedRole = val!),
+                                items: const [
+                                  DropdownMenuItem(value: 'faculty', child: Text('Faculty')),
+                                  DropdownMenuItem(value: 'security', child: Text('Security')),
+                                ],
+                              ),
+                            ],
+                          ),
                         const SizedBox(height: 35),
                         SizedBox(
                           width: double.infinity,
