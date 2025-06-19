@@ -159,7 +159,7 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white24),
+        border: Border.all(color: Colors.white12),
       ),
       child: Column(
         children: [
