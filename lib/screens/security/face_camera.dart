@@ -435,13 +435,13 @@ class CircularFaceGuidePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width * 0.48) * scale;
+    final radius = (size.width * 0.5) * scale;
 
     // Create a subtle inner circle guide
     final innerGuidePaint = Paint()
       ..color = Colors.white.withOpacity(0.1)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+      ..strokeWidth = 5.0;
 
     canvas.drawCircle(center, radius * 0.8, innerGuidePaint);
 
@@ -449,13 +449,13 @@ class CircularFaceGuidePainter extends CustomPainter {
     final circlePaint = Paint()
       ..color = isActive ? Colors.green.withOpacity(0.9) : Colors.white.withOpacity(0.8)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0;
+      ..strokeWidth = 4.0;
 
     // Inner glow effect
     final glowPaint = Paint()
       ..color = isActive ? Colors.green.withOpacity(0.4) : Colors.white.withOpacity(0.3)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6.0;
+      ..strokeWidth = 9.0;
 
     canvas.drawCircle(center, radius, glowPaint);
     canvas.drawCircle(center, radius, circlePaint);
@@ -469,7 +469,7 @@ class CircularFaceGuidePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    const crossSize = 8.0;
+    const crossSize = 3.0;
     canvas.drawLine(
       Offset(center.dx - crossSize, center.dy),
       Offset(center.dx + crossSize, center.dy),

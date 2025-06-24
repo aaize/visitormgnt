@@ -11,7 +11,7 @@ class AllVisitorsDashboard extends StatefulWidget {
 
 class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
   bool isLoading = false;
-  String selectedTab = 'visited'; // 'visited' or 'cancelled'
+  String selectedTab = 'pending'; // Changed default to 'pending'
 
   // Date filtering variables
   DateTime? fromDate;
@@ -96,10 +96,27 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
   }
 
   Query _buildQuery() {
-    final collection = selectedTab == 'visited' ? 'visitors-met' : 'visitors-cancelled';
-    final dateField = selectedTab == 'visited' ? 'met_at' : 'cancelled_at';
+    String collection;
+    String dateField;
 
-    // Remove the username filter to get all visitors
+    switch (selectedTab) {
+      case 'pending':
+        collection = 'visitors';
+        dateField = 'registered_at';
+        break;
+      case 'visited':
+        collection = 'visitors-met';
+        dateField = 'met_at';
+        break;
+      case 'cancelled':
+        collection = 'visitors-cancelled';
+        dateField = 'cancelled_at';
+        break;
+      default:
+        collection = 'visitors-registered';
+        dateField = 'registered_at';
+    }
+
     Query query = FirebaseFirestore.instance.collection(collection);
 
     if (fromDate != null) {
@@ -429,6 +446,7 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
         child: Column(
           children: [
             Icon(
+              type == 'pending' ? Icons.schedule :
               type == 'visited' ? Icons.check_circle_outline : Icons.cancel_outlined,
               size: 48,
               color: Colors.white.withOpacity(0.3),
@@ -483,17 +501,36 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
         }
 
         try {
-          actionAt = DateTime.parse(visitor[type == 'visited' ? 'met_at' : 'cancelled_at']);
+          String actionField = type == 'pending' ? 'registered_at' :
+          type == 'visited' ? 'met_at' : 'cancelled_at';
+          actionAt = DateTime.parse(visitor[actionField]);
         } catch (_) {
           actionAt = null;
         }
 
         return Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white24),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withOpacity(0.08),
+                Colors.white.withOpacity(0.03),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.15),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: GestureDetector(
             onTap: () {
@@ -505,8 +542,8 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
                     backgroundColor: Colors.transparent,
                     insetPadding: const EdgeInsets.all(10),
                     child: Container(
-                      height: 650,
-                      width: 340,
+                      height: 590,
+                      width: 320,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         image: DecorationImage(
@@ -533,135 +570,244 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
               }
             },
             child: Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.all(20),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: type == 'visited'
-                              ? Colors.green.withOpacity(0.2)
-                              : Colors.orange.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
+                  // Large Profile Image - Updated to use visitor's profile image
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        child: Icon(
-                          type == 'visited'
-                              ? Icons.check_circle
-                              : Icons.cancel,
-                          color: type == 'visited' ? Colors.green : Colors.orange,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                    child: _buildVisitorAvatar(visitor),
+                  ),
+
+                  const SizedBox(width: 20),
+
+                  // Visitor Details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name and Status Badge Row
+                        Row(
                           children: [
-                            Text(
-                              visitor['name'] ?? 'Unknown',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                            Expanded(
+                              child: Text(
+                                visitor['name'] ?? 'Unknown Visitor',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 0.1,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            // Status Badge
                             Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: type == 'visited'
-                                    ? Colors.green.withOpacity(0.2)
-                                    : Colors.orange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                type == 'visited' ? 'VISITED' : 'CANCELLED',
-                                style: TextStyle(
-                                  color: type == 'visited' ? Colors.green : Colors.orange,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
+                                gradient: LinearGradient(
+                                  colors: type == 'pending'
+                                      ? [
+                                    Colors.amber.withOpacity(0.3),
+                                    Colors.amber.withOpacity(0.5),
+                                  ]
+                                      : type == 'visited'
+                                      ? [
+                                    Colors.green.withOpacity(0.8),
+                                    Colors.green.withOpacity(0.6),
+                                  ]
+                                      : [
+                                    Colors.orange.withOpacity(0.8),
+                                    Colors.orange.withOpacity(0.6),
+                                  ],
                                 ),
+                                borderRadius: BorderRadius.circular(15),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (type == 'pending' ? Colors.amber :
+                                    type == 'visited' ? Colors.green : Colors.orange).withOpacity(0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    type == 'pending' ? Icons.schedule :
+                                    type == 'visited' ? Icons.check_circle : Icons.cancel,
+                                    color: Colors.amber,
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    type == 'pending' ? 'Pending' :
+                                    type == 'visited' ? 'Visited' : 'Cancelled',
+                                    style: const TextStyle(
+                                      color: Colors.amber,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      if (visitor['visitor_pass_url']?.isNotEmpty ?? false)
+
+                        const SizedBox(height: 12),
+
+                        // Purpose
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.2),
+                            color: Colors.blue.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'Tap for pass',
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
+                            border: Border.all(
+                              color: Colors.blue.withOpacity(0.3),
+                              width: 1,
                             ),
                           ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.work_outline,
+                                color: Colors.blue.shade300,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  visitor['purpose'] ?? 'General Visit',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue.shade200,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                    ],
+
+                        const SizedBox(height: 8),
+
+                        // Host Information
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline,
+                              color: Colors.white60,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Host: ${visitor['visited_to_username'] ?? 'Unknown'}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white.withOpacity(0.75),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        // Phone
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.phone_outlined,
+                              color: Colors.white60,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                visitor['phone'] ?? 'No phone provided',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white.withOpacity(0.75),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        // Registration and Action Time
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (registeredAt != null)
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.login,
+                                    color: Colors.white60,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Registered: ${_formatDateTime(registeredAt)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white54,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            if (actionAt != null && type != 'pending') ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    type == 'visited' ? Icons.check_circle_outline : Icons.cancel_outlined,
+                                    color: type == 'visited' ? Colors.green : Colors.orange,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${type == 'visited' ? 'Visited' : 'Cancelled'}: ${_formatDateTime(actionAt)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: type == 'visited' ? Colors.green.shade300 : Colors.orange.shade300,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  // Host information
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Host: ${visitor['visited_to_username'] ?? 'Unknown'}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.purple,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Purpose: ${visitor['purpose'] ?? 'Not specified'}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Phone: ${visitor['phone'] ?? 'Not provided'}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                  if (registeredAt != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Registered: ${registeredAt.toLocal().toString().split('.')[0]}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white54,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                  if (actionAt != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      '${type == 'visited' ? 'Visited' : 'Cancelled'}: ${actionAt.toLocal().toString().split('.')[0]}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: type == 'visited' ? Colors.green : Colors.orange,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -669,6 +815,94 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
         );
       },
     );
+  }
+
+  // Updated method to build visitor avatar with proper image handling
+  Widget _buildVisitorAvatar(Map<String, dynamic> visitor) {
+    final profileImageUrl = visitor['profile_image_url'] ?? '';
+    final visitorPassUrl = visitor['visitor_pass_url'] ?? '';
+
+    // Priority: profile_image_url > visitor_pass_url > fallback
+    String imageUrl = profileImageUrl.isNotEmpty ? profileImageUrl : visitorPassUrl;
+
+    if (imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          imageUrl,
+          width: 80,
+          height: 80,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildFallbackAvatar();
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) {
+              return child;
+            }
+            return Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    } else {
+      return _buildFallbackAvatar();
+    }
+  }
+
+  Widget _buildFallbackAvatar() {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.blue.withOpacity(0.3),
+            Colors.blue.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.4),
+          width: 2,
+        ),
+      ),
+      child: const Icon(
+        Icons.person,
+        color: Colors.blue,
+        size: 40,
+      ),
+    );
+  }
+
+  // Helper method for date formatting
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays == 0) {
+      return 'Today ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
   }
 
   Future<void> _refreshData() async {
@@ -687,235 +921,188 @@ class _AllVisitorsDashboardState extends State<AllVisitorsDashboard> {
     return Scaffold(
         backgroundColor: const Color(0xFF0A1A2F),
         appBar: AppBar(
-          backgroundColor: const Color(0xFF0A1A2F),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: const Text(
-            'All Visitors Dashboard',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+        backgroundColor: const Color(0xFF0A1A2F),
+    elevation: 0,
+    leading: IconButton(
+    icon: const Icon(CupertinoIcons.back, color: Colors.white),
+    onPressed: () => Navigator.of(context).pop(),
+    ),
+    title: const Text(
+    'Security Dashboard',
+    style: TextStyle(
+    color: Colors.white,
+      fontSize: 20,
+      fontWeight: FontWeight.bold,
+    ),
+    ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _refreshData,
             ),
-          ),
-          centerTitle: true,
+          ],
         ),
-        body: SafeArea(
-        child: RefreshIndicator(
+      body: RefreshIndicator(
         onRefresh: _refreshData,
         backgroundColor: const Color(0xFF1A2332),
-        color: Colors.white,
+        color: Colors.blue,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-            // TAB BUTTONS
-            Container(
-            decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white24),
-          ),
-          child: Row(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedTab = 'visited';
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      color: selectedTab == 'visited'
-                          ? Colors.green.withOpacity(0.8)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: selectedTab == 'visited'
-                              ? Colors.white
-                              : Colors.green,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Visited',
-                          style: TextStyle(
-                            color: selectedTab == 'visited'
-                                ? Colors.white
-                                : Colors.green,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+              // Tab Navigation
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedTab = 'pending';
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: selectedTab == 'pending'
+                                ? Colors.amber.withOpacity(0.5)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.schedule,
+                                color: selectedTab == 'pending' ? Colors.amber : Colors.white54,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Pending',
+                                style: TextStyle(
+                                  color: selectedTab == 'pending' ? Colors.amber : Colors.white54,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedTab = 'visited';
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: selectedTab == 'visited'
+                                ? Colors.green.withOpacity(0.3)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: selectedTab == 'visited' ? Colors.green : Colors.white54,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Visited',
+                                style: TextStyle(
+                                  color: selectedTab == 'visited' ? Colors.green : Colors.white54,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedTab = 'cancelled';
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: selectedTab == 'cancelled'
+                                ? Colors.orange.withOpacity(0.3)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.cancel,
+                                color: selectedTab == 'cancelled' ? Colors.orange : Colors.white54,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Cancelled',
+                                style: TextStyle(
+                                  color: selectedTab == 'cancelled' ? Colors.orange : Colors.white54,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedTab = 'cancelled';
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      color: selectedTab == 'cancelled'
-                          ? Colors.orange.withOpacity(0.8)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.cancel,
-                          color: selectedTab == 'cancelled'
-                              ? Colors.white
-                              : Colors.orange,
-                          size: 20,
+
+              const SizedBox(height: 24),
+
+              // Search Bar
+              _buildSearchBar(),
+
+              // Filter Section
+              _buildFilterSection(),
+
+              // Visitors List
+              StreamBuilder<QuerySnapshot>(
+                stream: _buildQuery().snapshots(),
+                builder: (context, snapshot) {
+                  if (isLoading) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Cancelled',
-                          style: TextStyle(
-                            color: selectedTab == 'cancelled'
-                                ? Colors.white
-                                : Colors.orange,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
+                    );
+                  }
+
+                  return _buildHistoryList(snapshot, selectedTab);
+                },
               ),
             ],
           ),
         ),
-
-        const SizedBox(height: 24),
-
-        // SEARCH BAR
-        _buildSearchBar(),
-
-        // DATE FILTER SECTION
-        _buildFilterSection(),
-
-        // HISTORY LIST FROM FIRESTORE
-        StreamBuilder<QuerySnapshot>(
-        stream: _buildQuery().snapshots(),
-    builder: (context, snapshot) {
-    // Show loading while fetching data
-    if (snapshot.connectionState == ConnectionState.waiting) {
-    return Column(
-    children: [
-    // HISTORY LIST TITLE with loading count
-    Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-    Text(
-    'All ${selectedTab == 'visited' ? 'Visited' : 'Cancelled'} Visitors',
-    style: const TextStyle(
-    color: Colors.white,
-    fontSize: 20,
-    fontWeight: FontWeight.bold,
-    ),
-    ),
-    Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-    color: (selectedTab == 'visited' ? Colors.green : Colors.orange).withOpacity(0.2),
-    borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: (selectedTab == 'visited' ? Colors.green : Colors.orange).withOpacity(0.3)),
-    ),
-    child: SizedBox(
-    width: 12,
-    height: 12,
-    child: CircularProgressIndicator(
-    strokeWidth: 2,
-    valueColor: AlwaysStoppedAnimation<Color>(
-    selectedTab == 'visited' ? Colors.green : Colors.orange
-    ),
-    ),
-    ),
-    ),
-    ],
-    ),
-    const SizedBox(height: 16),
-    const Center(child: CircularProgressIndicator()),
-    ],
-    );
-    }
-
-    // Calculate count from filtered data
-    final filteredDocs = _filterResults(snapshot.data?.docs ?? []);
-    final count = filteredDocs.length;
-
-    return Column(
-    children: [
-    // HISTORY LIST TITLE with count
-    Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-    Expanded(
-    child: Text(
-    'All ${selectedTab == 'visited' ? 'Visited' : 'Cancelled'} Visitors',
-    style: const TextStyle(
-    color: Colors.white,
-    fontSize: 20,
-    fontWeight: FontWeight.bold,
-    ),
-    ),
-    ),
-    Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-    color: (selectedTab == 'visited' ? Colors.green : Colors.orange).withOpacity(0.2),
-    borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: (selectedTab == 'visited' ? Colors.green : Colors.orange).withOpacity(0.3)),
-    ),
-    child: Text(
-    '$count',
-    style: TextStyle(
-    color: selectedTab == 'visited' ? Colors.green : Colors.orange,
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    ),
-    ),
-    ),
-    ],
-    ),
-    const SizedBox(height: 16),
-    // HISTORY LIST CONTENT
-
-      _buildHistoryList(snapshot, selectedTab),
-    ],
-    );
-    },
-        ),
-                ],
-            ),
-          ),
-        ),
-        ),
-        ),
+      ),
     );
   }
 }

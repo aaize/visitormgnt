@@ -485,6 +485,7 @@ class _FacultyScreenState extends State<FacultyScreen> {
     }
   }
 
+
   Future<void> _refreshData() async {
     await _loadUserData();
     setState(() {}); // This will trigger a rebuild and refresh the StreamBuilders

@@ -762,7 +762,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                   // DATE FILTER SECTION
                   _buildFilterSection(),
-
                   // HISTORY LIST FROM FIRESTORE
                   StreamBuilder<QuerySnapshot>(
                     stream: _buildQuery().snapshots(),

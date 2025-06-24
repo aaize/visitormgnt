@@ -1,179 +1,60 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:face_camera/face_camera.dart';
-import 'package:visitormgnt/screens/security/dashboard.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:visitormgnt/screens/login_screen.dart';
-import 'package:visitormgnt/screens/security/detail_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'face_camera.dart';
-import 'navbar.dart';
+// lib/screens/security/main_wrapper.dart
 
-class SecurityScreen extends StatefulWidget {
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visitormgnt/screens/security/dashboard.dart';
+import 'package:visitormgnt/screens/security/security_screen.dart';
+import 'package:visitormgnt/screens/security/navbar.dart';
+
+import '../login_screen.dart';
+
+class MainWrapper extends StatefulWidget {
   final String userId;
 
-  const SecurityScreen({Key? key, required this.userId}) : super(key: key);
+  const MainWrapper({super.key, required this.userId});
 
   @override
-  State<SecurityScreen> createState() => _SecurityScreenState();
+  State<MainWrapper> createState() => _MainWrapperState();
 }
 
-class _SecurityScreenState extends State<SecurityScreen> with TickerProviderStateMixin {
-  File? _profileImage;
-  bool _hasCapturedImage = false;
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-  bool _showRedDot = false;
+class _MainWrapperState extends State<MainWrapper> with TickerProviderStateMixin {
+  int _currentIndex = 0;
+  int _notificationCount = 0; // Changed from bool to int
   DateTime? _lastNotificationCheckTime;
-  int _selectedIndex = 0; // Add this for navigation bar
-  Set<String> _hiddenDocIds = {};
 
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
-
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
-    );
-
-    _fadeController.forward();
     _loadNotificationState();
-    _hasCapturedImage = false;
+    _listenForNewNotifications();
   }
 
   Future<void> _loadNotificationState() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _showRedDot = prefs.getBool('showRedDot') ?? false;
+      _notificationCount = prefs.getInt('notificationCount') ?? 0;
     });
   }
 
-  // Save notification state to SharedPreferences
-  Future<void> _saveNotificationState(bool state) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('showRedDot', state);
-  }
-
-  void _listenForNewNotifications() {
-    final now = DateTime.now();
-
-    // Listen to visitors-met collection
-    FirebaseFirestore.instance
-        .collection('visitors-met')
-        .orderBy('met_at', descending: true)
-        .snapshots()
-        .listen((snapshot) {
-      _checkForRecentChanges(snapshot.docs, 'met_at');
-    });
-
-    // Listen to visitors-cancelled collection
-    FirebaseFirestore.instance
-        .collection('visitors-cancelled')
-        .orderBy('cancelled_at', descending: true)
-        .snapshots()
-        .listen((snapshot) {
-      _checkForRecentChanges(snapshot.docs, 'cancelled_at');
-    });
-  }
-
-  void _checkForRecentChanges(List<dynamic> docs, String timeField) {
-    final now = DateTime.now();
-    bool hasRecentChanges = false;
-
-    for (var doc in docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final timestampStr = data[timeField] as String?;
-      final time = DateTime.tryParse(timestampStr ?? '');
-
-      if (time != null && now.difference(time).inMinutes < 1) {
-        hasRecentChanges = true;
-        break;
-      }
-    }
-
-    if (hasRecentChanges && !_showRedDot) {
-      setState(() {
-        _showRedDot = true;
-      });
-      _saveNotificationState(true);
-    }
-  }
-
-  // Handle navigation tap
   void _onNavTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  // Handle notification state change (called when notifications are viewed)
-  void _onNotificationStateChanged() {
-    _loadNotificationState();
-  }
-
-  // Photo handling methods
-  void _onPhotoTaken(File? image) {
-    if (image != null) {
+    if (index == 0 || index == 1) {
       setState(() {
-        _profileImage = image;
-        _hasCapturedImage = true;
+        _currentIndex = index;
       });
+    } else if (index == 2) {
+      _showNotifications();
+    } else if (index == 3) {
+      _showProfileOptions();
     }
   }
 
-  void _retakePhoto() {
-    setState(() {
-      _profileImage = null;
-      _hasCapturedImage = false;
-    });
-  }
-
-  void _usePhoto() {
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Login successful!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    // Handle navigation based on selected index
-    switch (index) {
-      case 0:
-      // Home - already on this screen
-        break;
-      case 1:
-      // Dashboard
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AllVisitorsDashboard()),
-        );
-        break;
-      case 2:
-      // Notifications
-        _showNotifications();
-        break;
-      case 3:
-      // Profile/Settings - you can add your own screen here
-        _showProfileOptions();
-        break;
-    }
+  void _onNotificationStateChanged() {
+    setState(() => _notificationCount = 0);
+    _saveNotificationState(0);
   }
 
   void _showProfileOptions() {
@@ -237,39 +118,72 @@ class _SecurityScreenState extends State<SecurityScreen> with TickerProviderStat
       ),
     );
   }
-/*
-  void _onPhotoTaken(File? image) {
-    if (image != null) {
+
+  Future<void> _saveNotificationState(int count) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('notificationCount', count);
+  }
+
+  void _listenForNewNotifications() {
+    // Listen to visitors-met collection
+    FirebaseFirestore.instance
+        .collection('visitors-met')
+        .orderBy('met_at', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      _checkForRecentChanges(snapshot.docs, 'met_at');
+    });
+
+    // Listen to visitors-cancelled collection
+    FirebaseFirestore.instance
+        .collection('visitors-cancelled')
+        .orderBy('cancelled_at', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      _checkForRecentChanges(snapshot.docs, 'cancelled_at');
+    });
+  }
+
+  void _checkForRecentChanges(List<dynamic> docs, String timeField) {
+    final now = DateTime.now();
+    int recentChangesCount = 0;
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final timestampStr = data[timeField] as String?;
+      final time = DateTime.tryParse(timestampStr ?? '');
+
+      // Check if the change happened after the last notification check
+      if (time != null) {
+        if (_lastNotificationCheckTime == null) {
+          // If no previous check time, consider changes in the last minute
+          if (now.difference(time).inMinutes < 1) {
+            recentChangesCount++;
+          }
+        } else {
+          // Check changes after the last notification check
+          if (time.isAfter(_lastNotificationCheckTime!)) {
+            recentChangesCount++;
+          }
+        }
+      }
+    }
+
+    // Update notification count if there are new changes
+    if (recentChangesCount > 0) {
       setState(() {
-        _profileImage = image;
-        _hasCapturedImage = true;
+        _notificationCount += recentChangesCount;
       });
+      _saveNotificationState(_notificationCount);
     }
   }
 
-  void _retakePhoto() {
-    setState(() {
-      _profileImage = null;
-      _hasCapturedImage = false;
-    });
-  }
-
-  void _usePhoto() {
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Login successful!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
-  }  */
-
   void _showNotifications() async {
-    // Mark notifications as seen (remove red dot)
+    // Mark notifications as seen (reset count to 0)
     setState(() {
-      _showRedDot = false;
+      _notificationCount = 0;
     });
-    await _saveNotificationState(false);
+    await _saveNotificationState(0);
 
     // Track when we last checked notifications
     _lastNotificationCheckTime = DateTime.now();
@@ -303,13 +217,6 @@ class _SecurityScreenState extends State<SecurityScreen> with TickerProviderStat
                   ),
                   Row(
                     children: [
-                      /*TextButton(
-                        onPressed: () => _clearAllNotifications(),
-                        child: const Text(
-                          'Clear All',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),*/
                       IconButton(
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.close, color: Colors.white),
@@ -474,6 +381,7 @@ class _SecurityScreenState extends State<SecurityScreen> with TickerProviderStat
       },
     );
   }
+
   Widget _buildEmptyState(bool isVisitedTab) {
     return Center(
       child: Column(
@@ -628,170 +536,35 @@ class _SecurityScreenState extends State<SecurityScreen> with TickerProviderStat
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      SecurityScreen(userId: widget.userId),
+      const AllVisitorsDashboard(),
+    ];
+
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A1A2F),
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Security Portal',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+      backgroundColor: const Color(0xFF0A1A2F),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 500),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.1),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
           ),
         ),
-        centerTitle: true,
+        child: screens[_currentIndex],
       ),
-      body: Center(
-        //decoration: const BoxDecoration(color: Color(0xFF0A1A2F)),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 0),
-                    Image.asset(
-                      'assets/amclogo.png',
-                      height: 140,
-                      width: 220,
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: 250,
-                      height: 250,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: _hasCapturedImage && _profileImage != null
-                            ? Image.file(_profileImage!, fit: BoxFit.cover)
-                            : CircularFaceCaptureWidget(onPhotoTaken: _onPhotoTaken),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Text(
-                      _hasCapturedImage
-                          ? 'Face captured successfully!'
-                          : 'Position your face in the circle above',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 40),
-                    if (_hasCapturedImage) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildActionButton(
-                            icon: CupertinoIcons.refresh,
-                            label: '',
-                            onTap: _retakePhoto,
-                            isPrimary: false,
-                          ),
-                          _buildActionButton(
-                            icon: CupertinoIcons.checkmark_alt,
-                            label: '',
-                            onTap: () {
-                              if (_profileImage != null) {
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (context) =>
-                                        DetailScreen(profileImage: _profileImage!),
-                                  ),
-                                );
-                              }
-                            },
-                            isPrimary: true,
-                            color: Colors.green,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 40),
-                    ],
-
-                   // Add space for navigation bar
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-
-    );
-
-
-  }
-
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required bool isPrimary,
-    Color? color,
-  }) {
-    final backgroundColor =
-        color ?? (isPrimary ? Colors.white : Colors.white.withOpacity(0.2));
-    final iconTextColor = color != null
-        ? Colors.white
-        : (isPrimary ? const Color(0xFF667eea) : Colors.white);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: iconTextColor, size: 18),
-            if (label.isNotEmpty) const SizedBox(width: 8),
-            if (label.isNotEmpty)
-              Text(
-                label,
-                style: TextStyle(
-                  color: iconTextColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-          ],
-        ),
+      bottomNavigationBar: CustomBottomNavigation(
+        currentIndex: _currentIndex,
+        onTap: _onNavTapped,
+        notificationCount: _notificationCount, // Pass the count instead of boolean
+        onNotificationStateChanged: _onNotificationStateChanged,
       ),
     );
   }
-
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visitormgnt/screens/security/main_wrapper.dart';
 
 // Replace with your actual screens
 import 'screens/login_screen.dart';
@@ -50,20 +51,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     Widget nextScreen;
 
     if (savedUsername.toLowerCase() == 'security') {
-      nextScreen = SecurityScreen(userId: savedUsername);
+      nextScreen = MainWrapper(userId: savedUsername); // ✅ new MainWrapper
     } else if (savedUsername.toUpperCase().startsWith('MCA')) {
       nextScreen = FacultyScreen(userId: savedUsername);
     } else {
-      nextScreen = LoginScreen();
+      nextScreen = const LoginScreen();
     }
 
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        CupertinoPageRoute(builder: (_) => nextScreen),
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => nextScreen,
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.2),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
       );
     }
   }
+
+
 
   @override
   void dispose() {
